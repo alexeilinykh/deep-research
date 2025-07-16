@@ -1,7 +1,10 @@
 import ReactMarkdown, { type Components } from "react-markdown";
+import type { Message } from "ai";
+
+export type MessagePart = NonNullable<Message["parts"]>[number];
 
 interface ChatMessageProps {
-  text: string;
+  parts: MessagePart[];
   role: string;
   userName: string;
 }
@@ -38,7 +41,31 @@ const Markdown = ({ children }: { children: string }) => {
   return <ReactMarkdown components={components}>{children}</ReactMarkdown>;
 };
 
-export const ChatMessage = ({ text, role, userName }: ChatMessageProps) => {
+const ToolInvocation = ({
+  part,
+}: {
+  part: Extract<MessagePart, { type: "tool-invocation" }>;
+}) => {
+  const { toolInvocation } = part;
+  return (
+    <div className="rounded bg-gray-700 p-2">
+      <p className="text-sm text-blue-400">Tool: {toolInvocation.toolName}</p>
+      <p className="mb-1 text-xs text-gray-400">
+        State: {toolInvocation.state ?? "call"}
+      </p>
+      <pre className="mb-2 text-xs text-gray-300">
+        Args: {JSON.stringify(toolInvocation.args, null, 2)}
+      </pre>
+      {"result" in toolInvocation && toolInvocation.result !== undefined && (
+        <pre className="text-xs text-green-300">
+          Result: {JSON.stringify(toolInvocation.result, null, 2)}
+        </pre>
+      )}
+    </div>
+  );
+};
+
+export const ChatMessage = ({ parts, role, userName }: ChatMessageProps) => {
   const isAI = role === "assistant";
 
   return (
@@ -53,7 +80,16 @@ export const ChatMessage = ({ text, role, userName }: ChatMessageProps) => {
         </p>
 
         <div className="prose prose-invert max-w-none">
-          <Markdown>{text}</Markdown>
+          {parts.map((part, index) => {
+            switch (part.type) {
+              case "text":
+                return <Markdown key={index}>{part.text}</Markdown>;
+              case "tool-invocation":
+                return <ToolInvocation key={index} part={part} />;
+              default:
+                return null;
+            }
+          })}
         </div>
       </div>
     </div>
