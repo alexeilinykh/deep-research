@@ -4,6 +4,7 @@ import { model } from "~/model";
 import { auth } from "~/server/auth/";
 import { searchSerper } from "~/serper";
 import { z } from "zod";
+import { checkRateLimit, recordRequest } from "~/server/rate-limit";
 
 export const maxDuration = 60;
 
@@ -13,6 +14,18 @@ export async function POST(request: Request) {
   if (!session) {
     return new Response("Unauthorized", { status: 401 });
   }
+
+  // Use user id from session
+  const userId = session.user.id;
+
+  // Rate limit: allow 100 requests per day for non-admins
+  const canRequest = await checkRateLimit(userId);
+  if (!canRequest) {
+    return new Response("Too Many Requests", { status: 429 });
+  }
+
+  // Record the request
+  await recordRequest(userId);
 
   const body = (await request.json()) as {
     messages: Array<Message>;
