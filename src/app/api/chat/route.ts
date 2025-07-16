@@ -1,10 +1,18 @@
 import type { Message } from "ai";
-import { streamText, createDataStreamResponse } from "ai";
+import {
+  streamText,
+  createDataStreamResponse,
+  appendResponseMessages,
+} from "ai";
 import { model } from "~/model";
 import { auth } from "~/server/auth/";
 import { searchSerper } from "~/serper";
 import { z } from "zod";
 import { checkRateLimit, recordRequest } from "~/server/rate-limit";
+import { upsertChat } from "~/server/db/queries";
+import { db } from "~/server/db";
+import { chats } from "~/server/db/schema";
+import { eq } from "drizzle-orm";
 
 export const maxDuration = 60;
 
@@ -29,12 +37,33 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     messages: Array<Message>;
+    chatId?: string;
   };
+
+  const { messages, chatId } = body;
+
+  let currentChatId = chatId;
+  if (!currentChatId) {
+    const newChatId = crypto.randomUUID();
+    await upsertChat({
+      userId: session.user.id,
+      chatId: newChatId,
+      title: messages[messages.length - 1]!.content.slice(0, 50) + "...",
+      messages: messages, // Only save the user's message initially
+    });
+    currentChatId = newChatId;
+  } else {
+    // Verify the chat belongs to the user
+    const chat = await db.query.chats.findFirst({
+      where: eq(chats.id, currentChatId),
+    });
+    if (!chat || chat.userId !== session.user.id) {
+      return new Response("Chat not found or unauthorized", { status: 404 });
+    }
+  }
 
   return createDataStreamResponse({
     execute: async (dataStream) => {
-      const { messages } = body;
-
       const result = streamText({
         model,
         messages,
@@ -68,6 +97,27 @@ export async function POST(request: Request) {
 
 Remember to use the searchWeb tool whenever you need to find current information.`,
         maxSteps: 10,
+        onFinish: async ({ text, finishReason, usage, response }) => {
+          const responseMessages = response.messages;
+
+          const updatedMessages = appendResponseMessages({
+            messages,
+            responseMessages,
+          });
+
+          const lastMessage = messages[messages.length - 1];
+          if (!lastMessage) {
+            return;
+          }
+
+          // Update the chat with all messages including the AI response
+          await upsertChat({
+            userId,
+            chatId: currentChatId,
+            title: lastMessage.content.slice(0, 50) + "...",
+            messages: updatedMessages,
+          });
+        },
       });
 
       result.mergeIntoDataStream(dataStream);
