@@ -37,21 +37,20 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     messages: Array<Message>;
-    chatId?: string;
+    chatId: string;
+    isNewChat?: boolean;
   };
 
-  const { messages, chatId } = body;
+  const { messages, chatId, isNewChat = false } = body;
 
   let currentChatId = chatId;
-  if (!currentChatId) {
-    const newChatId = crypto.randomUUID();
+  if (isNewChat) {
     await upsertChat({
       userId: session.user.id,
-      chatId: newChatId,
+      chatId: currentChatId,
       title: messages[messages.length - 1]!.content.slice(0, 50) + "...",
       messages: messages, // Only save the user's message initially
     });
-    currentChatId = newChatId;
   } else {
     // Verify the chat belongs to the user
     const chat = await db.query.chats.findFirst({
@@ -65,7 +64,7 @@ export async function POST(request: Request) {
   return createDataStreamResponse({
     execute: async (dataStream) => {
       // If this is a new chat, send the chat ID to the frontend
-      if (!chatId) {
+      if (isNewChat) {
         dataStream.writeData({
           type: "NEW_CHAT_CREATED",
           chatId: currentChatId,

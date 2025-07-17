@@ -3,25 +3,38 @@ import Link from "next/link";
 import { auth } from "~/server/auth/index.ts";
 import { ChatPage } from "./chat.tsx";
 import { AuthButton } from "../components/auth-button.tsx";
-
-const chats = [
-  {
-    id: "1",
-    title: "My First Chat",
-  },
-];
-
-const activeChatId = "1";
+import { getChats, getChat } from "~/server/db/queries";
+import type { Message } from "ai";
 
 export default async function HomePage({
   searchParams,
 }: {
   searchParams: Promise<{ id?: string }>;
 }) {
-  const { id: chatId } = await searchParams;
+  const { id: chatIdFromUrl } = await searchParams;
   const session = await auth();
   const userName = session?.user?.name ?? "Guest";
   const isAuthenticated = !!session?.user;
+
+  // Generate a stable chatId, either from URL or create a new one
+  const chatId = chatIdFromUrl ?? crypto.randomUUID();
+  const isNewChat = !chatIdFromUrl;
+
+  // Fetch chats for authenticated users
+  let chats: Awaited<ReturnType<typeof getChats>> = [];
+  let initialMessages: Message[] = [];
+
+  if (isAuthenticated && session?.user?.id) {
+    chats = await getChats(session.user.id);
+
+    // If there's a chatId from URL, fetch the specific chat
+    if (chatIdFromUrl) {
+      const chat = await getChat(chatIdFromUrl, session.user.id);
+      if (chat) {
+        initialMessages = chat.messages as Message[];
+      }
+    }
+  }
 
   return (
     <div className="flex h-screen bg-gray-950">
@@ -74,9 +87,12 @@ export default async function HomePage({
       </div>
 
       <ChatPage
+        key={chatId}
         userName={userName}
         isAuthenticated={isAuthenticated}
         chatId={chatId}
+        isNewChat={isNewChat}
+        initialMessages={initialMessages}
       />
     </div>
   );
