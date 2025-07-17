@@ -1,32 +1,19 @@
 import { streamText, type Message, type TelemetrySettings } from "ai";
 import { model } from "~/model";
 import { searchSerper } from "~/serper";
-import { z } from "zod";
 import { bulkCrawlWebsites } from "~/server/scraper";
+import { z } from "zod";
 
 export const streamFromDeepSearch = (opts: {
   messages: Message[];
   onFinish: Parameters<typeof streamText>[0]["onFinish"];
   telemetry: TelemetrySettings;
-}) => {
-  const now = new Date();
-  const nowString =
-    now.toLocaleString("en-US", {
-      timeZone: "UTC",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    }) + " UTC";
-
-  return streamText({
+}) =>
+  streamText({
     model,
     messages: opts.messages,
     maxSteps: 10,
-    system: `You are a helpful AI assistant with access to real-time web search capabilities. The current date and time is ${nowString}. when answering questions:
+    system: `You are a helpful AI assistant with access to real-time web search capabilities. The current date and time is ${new Date().toLocaleString()}. When answering questions:
 
 1. Always search the web for up-to-date information when relevant
 2. ALWAYS format URLs as markdown links using the format [title](url)
@@ -35,9 +22,19 @@ export const streamFromDeepSearch = (opts: {
 5. When providing information, always include the source where you found it using markdown links
 6. Never include raw URLs - always use markdown link format
 7. When users ask for up-to-date information, use the current date to provide context about how recent the information is
+8. IMPORTANT: After finding relevant URLs from search results, ALWAYS use the scrapePages tool to get the full content of those pages. Never rely solely on search snippets.
 
-Remember to use the searchWeb tool whenever you need to find current information.
-`,
+Your workflow should be:
+1. Use searchWeb to find 10 relevant URLs from diverse sources (news sites, blogs, official documentation, etc.)
+2. Select 4-6 of the most relevant and diverse URLs to scrape
+3. Use scrapePages to get the full content of those URLs
+4. Use the full content to provide detailed, accurate answers
+
+Remember to:
+- Always scrape multiple sources (4-6 URLs) for each query
+- Choose diverse sources (e.g., not just news sites or just blogs)
+- Prioritize official sources and authoritative websites
+- Use the full content to provide comprehensive answers`,
     tools: {
       searchWeb: {
         parameters: z.object({
@@ -49,12 +46,11 @@ Remember to use the searchWeb tool whenever you need to find current information
             abortSignal,
           );
 
-          // Include published date if available
           return results.organic.map((result) => ({
             title: result.title,
             link: result.link,
             snippet: result.snippet,
-            date: result.date || null,
+            date: result.date,
           }));
         },
       },
@@ -89,7 +85,6 @@ Remember to use the searchWeb tool whenever you need to find current information
     onFinish: opts.onFinish,
     experimental_telemetry: opts.telemetry,
   });
-};
 
 export async function askDeepSearch(messages: Message[]) {
   const result = streamFromDeepSearch({
