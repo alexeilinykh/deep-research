@@ -13,6 +13,12 @@ import { upsertChat } from "~/server/db/queries";
 import { db } from "~/server/db";
 import { chats } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import { Langfuse } from "langfuse";
+import { env } from "~/env";
+
+const langfuse = new Langfuse({
+  environment: env.NODE_ENV,
+});
 
 export const maxDuration = 60;
 
@@ -61,6 +67,13 @@ export async function POST(request: Request) {
     }
   }
 
+  // Create Langfuse trace with session and user information
+  const trace = langfuse.trace({
+    sessionId: currentChatId,
+    name: "chat",
+    userId: session.user.id,
+  });
+
   return createDataStreamResponse({
     execute: async (dataStream) => {
       // If this is a new chat, send the chat ID to the frontend
@@ -74,6 +87,13 @@ export async function POST(request: Request) {
       const result = streamText({
         model,
         messages,
+        experimental_telemetry: {
+          isEnabled: true,
+          functionId: `agent`,
+          metadata: {
+            langfuseTraceId: trace.id,
+          },
+        },
         tools: {
           searchWeb: {
             parameters: z.object({
@@ -124,6 +144,9 @@ Remember to use the searchWeb tool whenever you need to find current information
             title: lastMessage.content.slice(0, 50) + "...",
             messages: updatedMessages,
           });
+
+          // Flush the trace to Langfuse
+          await langfuse.flushAsync();
         },
       });
 
