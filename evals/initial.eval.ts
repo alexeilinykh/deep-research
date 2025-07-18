@@ -8,6 +8,7 @@ import { env } from "~/env";
 import { devData } from "./dev";
 import { ciData } from "./ci";
 import { regressionData } from "./regression";
+import { AnswerRelevancy } from "./answer-relevancy";
 
 // Build dataset based on EVAL_DATASET environment variable
 let data = [...devData];
@@ -115,5 +116,6 @@ evalite("Deep Search Eval", {
       },
     },
     Factuality,
+    AnswerRelevancy,
   ],
 });
