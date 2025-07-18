@@ -63,9 +63,9 @@ export async function POST(request: Request) {
     // If the rate limit is still exceeded after retrying, we'll continue anyway
     // since the requirements ask to wait rather than return 429
     if (!isAllowed) {
-      console.log(
-        "Global rate limit still exceeded after retries, but continuing...",
-      );
+      return new Response("Rate limit exceeded", {
+        status: 429,
+      });
     }
   }
 
