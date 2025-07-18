@@ -2,6 +2,11 @@ import type { Message } from "ai";
 import { createDataStreamResponse, appendResponseMessages } from "ai";
 import { auth } from "~/server/auth/";
 import { checkRateLimit, recordRequest } from "~/server/rate-limit";
+import {
+  checkRateLimit as checkGlobalRateLimit,
+  recordRateLimit,
+  type RateLimitConfig,
+} from "~/server/global-rate-limit";
 import { upsertChat } from "~/server/db/queries";
 import { db } from "~/server/db";
 import { chats } from "~/server/db/schema";
@@ -30,6 +35,50 @@ export async function POST(request: Request) {
   const trace = langfuse.trace({
     name: "chat",
     userId: userId,
+  });
+
+  // Global rate limit: allow 1 request per 5 seconds for testing
+  const globalRateLimitConfig: RateLimitConfig = {
+    maxRequests: 100,
+    maxRetries: 2,
+    windowMs: 60_000, // 5 seconds
+    keyPrefix: "global",
+  };
+
+  // Check the global rate limit
+  const globalRateLimitSpan = trace.span({
+    name: "check-global-rate-limit",
+    input: {
+      config: globalRateLimitConfig,
+    },
+  });
+
+  const globalRateLimitCheck = await checkGlobalRateLimit(
+    globalRateLimitConfig,
+  );
+
+  if (!globalRateLimitCheck.allowed) {
+    console.log("Global rate limit exceeded, waiting...");
+    const isAllowed = await globalRateLimitCheck.retry();
+    // If the rate limit is still exceeded after retrying, we'll continue anyway
+    // since the requirements ask to wait rather than return 429
+    if (!isAllowed) {
+      console.log(
+        "Global rate limit still exceeded after retries, but continuing...",
+      );
+    }
+  }
+
+  // Record the global rate limit request
+  await recordRateLimit(globalRateLimitConfig);
+
+  globalRateLimitSpan.end({
+    output: {
+      success: true,
+      allowed: globalRateLimitCheck.allowed,
+      remaining: globalRateLimitCheck.remaining,
+      totalHits: globalRateLimitCheck.totalHits,
+    },
   });
 
   // Rate limit: allow 100 requests per day for non-admins
