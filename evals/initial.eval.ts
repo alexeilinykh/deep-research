@@ -83,6 +83,7 @@ const Factuality = createScorer<Message[], string, string>({
 evalite("Deep Search Eval", {
   data: async (): Promise<{ input: Message[]; expected: string }[]> => {
     return [
+      // Basic questions requiring recent knowledge
       {
         input: [
           {
@@ -116,6 +117,90 @@ Server Actions Security: Unguessable endpoints and removal of unused actions.
 Bundling External Packages (Stable): New config options for App and Pages Router.
 ESLint 9 Support: Added support for ESLint 9.
 Development and Build Performance: Improved build times and Faster Fast Refresh.`,
+      },
+      {
+        input: [
+          {
+            id: "3",
+            role: "user",
+            content:
+              "When was Vite 6 released and what are its key improvements over Vite 5?",
+          },
+        ],
+        expected:
+          "Vite 6 was released in December 2024. Key improvements include: Environment API for better SSR support, improved dependency optimization, enhanced plugin ecosystem, better performance for large projects, and modernized build pipeline with updated Rollup integration.",
+      },
+      {
+        input: [
+          {
+            id: "4",
+            role: "user",
+            content:
+              "What is the current status of the TC39 proposal for the Pipeline Operator in JavaScript?",
+          },
+        ],
+        expected:
+          "The Pipeline Operator proposal is currently at Stage 2 in the TC39 process. The proposal uses the |> syntax and has been actively discussed with various syntax alternatives being considered, including F# style and Hack style pipelines.",
+      },
+      {
+        input: [
+          {
+            id: "5",
+            role: "user",
+            content: "What are the breaking changes in ESLint 9?",
+          },
+        ],
+        expected:
+          "ESLint 9 breaking changes include: flat config is now the default configuration format, removal of deprecated rules and formatters, Node.js 18+ requirement, removal of legacy CLI options, and changes to the plugin loading mechanism.",
+      },
+      // Multi-hop reasoning questions
+      {
+        input: [
+          {
+            id: "6",
+            role: "user",
+            content:
+              "Which JavaScript framework had the most significant performance improvements in 2024, and how do those improvements compare to the performance gains React achieved with its concurrent features in 2022?",
+          },
+        ],
+        expected:
+          "Svelte 5 had the most significant performance improvements in 2024 with its new reactivity system (runes) providing up to 3x faster updates. React's concurrent features in 2022 (Suspense, concurrent rendering) provided different benefits focused on user experience and responsiveness rather than raw performance, with improvements in perceived performance and better handling of updates.",
+      },
+      {
+        input: [
+          {
+            id: "7",
+            role: "user",
+            content:
+              "If I'm migrating from Webpack 4 to the latest build tools in 2025, what would be the migration path considering bundle size, build speed, and ecosystem compatibility, and which tools would give me the best ROI?",
+          },
+        ],
+        expected:
+          "For migrating from Webpack 4 in 2025: Vite 6 offers the best ROI with 10-100x faster dev builds, smaller bundle sizes through better tree-shaking, and excellent ecosystem compatibility. Alternative path: Webpack 5 → Turbopack (if using Next.js) or esbuild for maximum build speed. Consider Rollup for libraries. Vite provides the smoothest migration with minimal config changes while delivering significant performance gains.",
+      },
+      {
+        input: [
+          {
+            id: "8",
+            role: "user",
+            content:
+              "What are the compatibility requirements between TypeScript 5.8, Node.js 22, and the latest versions of popular frameworks like Next.js 15, and are there any known issues when using them together?",
+          },
+        ],
+        expected:
+          "TypeScript 5.8 is compatible with Node.js 22 and Next.js 15. Next.js 15 officially supports TypeScript 5.6+ and Node.js 18.18+. Known considerations: ensure @types/node matches Node.js 22, some TypeScript 5.8 strict mode changes may require code updates, and Next.js 15's React 19 support works well with TypeScript 5.8's improved JSX handling.",
+      },
+      {
+        input: [
+          {
+            id: "9",
+            role: "user",
+            content:
+              "Considering the current state of JavaScript runtimes in 2025, if I need to deploy a server-side application that uses the latest ES2024 features and requires the best performance, which runtime should I choose and why, comparing Node.js, Deno, and Bun across performance, ecosystem, and feature support?",
+          },
+        ],
+        expected:
+          "For server-side deployment in 2025 with ES2024 features: Bun 1.1+ offers the best performance (3-4x faster than Node.js for many workloads) and native ES2024 support. Node.js 22+ has the largest ecosystem and production stability. Deno 2.0+ provides excellent TypeScript support and security model. Choose Bun for greenfield projects prioritizing performance, Node.js for complex ecosystem dependencies, or Deno for TypeScript-first applications with security requirements.",
       },
     ];
   },
