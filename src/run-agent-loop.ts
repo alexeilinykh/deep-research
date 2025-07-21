@@ -5,11 +5,12 @@ import { env } from "~/env";
 import { SystemContext } from "./system-context";
 import { getNextAction } from "./get-next-action";
 import { answerQuestion } from "./answer-question";
+import type { StreamTextResult } from "ai";
 
 export async function runAgentLoop(
   userQuestion: string,
   abortSignal?: AbortSignal,
-) {
+): Promise<StreamTextResult<{}, string>> {
   // A persistent container for the state of our system
   const ctx = new SystemContext();
 

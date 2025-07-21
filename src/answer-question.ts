@@ -1,12 +1,12 @@
-import { generateText } from "ai";
+import { streamText, type StreamTextResult } from "ai";
 import { model } from "~/model";
 import { SystemContext } from "./system-context";
 
-export async function answerQuestion(
+export function answerQuestion(
   context: SystemContext,
   userQuestion: string,
   options: { isFinal?: boolean } = {},
-) {
+): StreamTextResult<{}, string> {
   const { isFinal = false } = options;
 
   const systemPrompt = `You are a helpful AI assistant. Your goal is to provide accurate, comprehensive answers based on the information you have gathered.
@@ -38,10 +38,8 @@ User's Question: "${userQuestion}"
 
 Please provide a comprehensive answer based on the information you have gathered.`;
 
-  const result = await generateText({
+  return streamText({
     model,
     prompt: systemPrompt,
   });
-
-  return result.text;
 }
