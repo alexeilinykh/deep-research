@@ -1,0 +1,80 @@
+import { generateObject } from "ai";
+import { model } from "~/model";
+import { z } from "zod";
+import { SystemContext } from "./system-context";
+
+// Action types for the next action decision
+export interface SearchAction {
+  type: "search";
+  query: string;
+}
+
+export interface ScrapeAction {
+  type: "scrape";
+  urls: string[];
+}
+
+export interface AnswerAction {
+  type: "answer";
+}
+
+export type Action = SearchAction | ScrapeAction | AnswerAction;
+
+// Schema for structured LLM output - avoiding z.union for better LLM compatibility
+export const actionSchema = z.object({
+  type: z.enum(["search", "scrape", "answer"]).describe(
+    `The type of action to take.
+      - 'search': Search the web for more information.
+      - 'scrape': Scrape a URL.
+      - 'answer': Answer the user's question and complete the loop.`,
+  ),
+  query: z
+    .string()
+    .describe("The query to search for. Required if type is 'search'.")
+    .optional(),
+  urls: z
+    .array(z.string())
+    .describe("The URLs to scrape. Required if type is 'scrape'.")
+    .optional(),
+});
+
+export const getNextAction = async (
+  context: SystemContext,
+  userQuestion: string,
+) => {
+  const result = await generateObject({
+    model,
+    schema: actionSchema,
+    prompt: `
+You are a helpful AI assistant with access to real-time web search and scraping capabilities. The current date and time is ${new Date().toLocaleString()}.
+
+Your goal is to gather comprehensive information to answer the user's question accurately and thoroughly.
+
+User's Question: "${userQuestion}"
+
+Your workflow should be:
+1. If you need more information, SEARCH the web for relevant, up-to-date information from diverse sources
+2. If you have found relevant URLs in search results, SCRAPE those pages to get full content (4-6 URLs maximum per scrape action)
+3. When you have sufficient information from multiple sources, ANSWER the user's question
+
+Guidelines:
+- Always search for current, authoritative information
+- Prioritize official sources and reputable websites
+- Scrape multiple diverse sources (news sites, documentation, blogs, etc.)
+- Don't rely solely on search snippets - scrape pages for full content
+- Only answer when you have comprehensive information from scraped sources
+
+Current Context:
+
+Query History:
+${context.getQueryHistory() || "No queries performed yet."}
+
+Scrape History:
+${context.getScrapeHistory() || "No pages scraped yet."}
+
+Based on the context above and the user's question, what should be the next action?
+    `,
+  });
+
+  return result.object;
+};
