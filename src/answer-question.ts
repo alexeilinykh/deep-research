@@ -45,7 +45,7 @@ Please provide a comprehensive answer based on the information you have gathered
     experimental_transform: [
       markdownJoinerTransform(),
       smoothStream({
-        delayInMs: 20,
+        delayInMs: 50,
         chunking: "word",
       }),
     ],
