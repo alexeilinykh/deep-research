@@ -1,6 +1,7 @@
-import { streamText, type StreamTextResult } from "ai";
+import { streamText, smoothStream, type StreamTextResult } from "ai";
 import { model } from "~/model";
 import { SystemContext } from "./system-context";
+import { markdownJoinerTransform } from "./markdown-joiner";
 
 export function answerQuestion(
   context: SystemContext,
@@ -41,5 +42,12 @@ Please provide a comprehensive answer based on the information you have gathered
   return streamText({
     model,
     prompt: systemPrompt,
+    experimental_transform: [
+      markdownJoinerTransform(),
+      smoothStream({
+        delayInMs: 20,
+        chunking: "word",
+      }),
+    ],
   });
 }
