@@ -43,11 +43,11 @@ Please provide a comprehensive answer based on the information you have gathered
     model,
     prompt: systemPrompt,
     experimental_transform: [
-      markdownJoinerTransform(),
       smoothStream({
         delayInMs: 50,
         chunking: "word",
       }),
+      markdownJoinerTransform(),
     ],
   });
 }
