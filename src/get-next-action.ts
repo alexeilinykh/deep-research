@@ -59,10 +59,20 @@ export const actionSchema = z.object({
 export const getNextAction = async (
   context: SystemContext,
   userQuestion: string,
+  langfuseTraceId?: string,
 ) => {
   const result = await generateObject({
     model,
     schema: actionSchema,
+    ...(langfuseTraceId && {
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "get-next-action",
+        metadata: {
+          langfuseTraceId: langfuseTraceId,
+        },
+      },
+    }),
     prompt: `
 You are a helpful AI assistant with access to real-time web search and scraping capabilities. The current date and time is ${new Date().toLocaleString()}.
 

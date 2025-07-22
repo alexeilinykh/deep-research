@@ -17,9 +17,15 @@ export async function streamFromDeepSearch(opts: {
   // Extract the user's question from the messages
   const userQuestion = opts.messages[opts.messages.length - 1]?.content || "";
 
+  // Extract langfuseTraceId from telemetry metadata if available
+  const langfuseTraceId = opts.telemetry.metadata?.langfuseTraceId as
+    | string
+    | undefined;
+
   // Run the agent loop and wait for the result
   return await runAgentLoop(userQuestion, {
     writeMessageAnnotation: opts.writeMessageAnnotation,
+    langfuseTraceId,
   });
 }
 

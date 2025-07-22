@@ -6,9 +6,9 @@ import { markdownJoinerTransform } from "./markdown-joiner";
 export function answerQuestion(
   context: SystemContext,
   userQuestion: string,
-  options: { isFinal?: boolean } = {},
+  options: { isFinal?: boolean; langfuseTraceId?: string } = {},
 ): StreamTextResult<{}, string> {
-  const { isFinal = false } = options;
+  const { isFinal = false, langfuseTraceId } = options;
 
   const systemPrompt = `You are a helpful AI assistant. Your goal is to provide accurate, comprehensive answers based on the information you have gathered.
 
@@ -42,6 +42,15 @@ Please provide a comprehensive answer based on the information you have gathered
   return streamText({
     model,
     prompt: systemPrompt,
+    ...(langfuseTraceId && {
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "answer-question",
+        metadata: {
+          langfuseTraceId: langfuseTraceId,
+        },
+      },
+    }),
     experimental_transform: [
       smoothStream({
         delayInMs: 50,

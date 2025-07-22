@@ -12,9 +12,14 @@ export async function runAgentLoop(
   options: {
     abortSignal?: AbortSignal;
     writeMessageAnnotation?: (annotation: OurMessageAnnotation) => void;
+    langfuseTraceId?: string;
   } = {},
 ): Promise<StreamTextResult<{}, string>> {
-  const { abortSignal, writeMessageAnnotation = () => {} } = options;
+  const {
+    abortSignal,
+    writeMessageAnnotation = () => {},
+    langfuseTraceId,
+  } = options;
   // A persistent container for the state of our system
   const ctx = new SystemContext();
 
@@ -22,7 +27,7 @@ export async function runAgentLoop(
   // or we've taken 10 actions
   while (!ctx.shouldStop()) {
     // We choose the next action based on the state of our system
-    const nextAction = await getNextAction(ctx, userQuestion);
+    const nextAction = await getNextAction(ctx, userQuestion, langfuseTraceId);
 
     // Send progress annotation to the UI
     writeMessageAnnotation({
@@ -80,7 +85,7 @@ export async function runAgentLoop(
         );
       }
     } else if (nextAction.type === "answer") {
-      return answerQuestion(ctx, userQuestion);
+      return answerQuestion(ctx, userQuestion, { langfuseTraceId });
     }
 
     // Increment the step counter after each action
@@ -89,5 +94,5 @@ export async function runAgentLoop(
 
   // If we've taken 10 actions and still don't have an answer,
   // we ask the LLM to give its best attempt at an answer
-  return answerQuestion(ctx, userQuestion, { isFinal: true });
+  return answerQuestion(ctx, userQuestion, { isFinal: true, langfuseTraceId });
 }
