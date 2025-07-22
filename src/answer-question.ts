@@ -1,14 +1,22 @@
-import { streamText, smoothStream, type StreamTextResult } from "ai";
+import {
+  streamText,
+  smoothStream,
+  type StreamTextResult,
+  type Message,
+} from "ai";
 import { model } from "~/model";
 import { SystemContext } from "./system-context";
 import { markdownJoinerTransform } from "./markdown-joiner";
 
 export function answerQuestion(
   context: SystemContext,
-  userQuestion: string,
   options: { isFinal?: boolean; langfuseTraceId?: string } = {},
 ): StreamTextResult<{}, string> {
   const { isFinal = false, langfuseTraceId } = options;
+
+  // Get the conversation history and current user question from context
+  const conversationHistory = context.getMessageHistory();
+  const userQuestion = context.getCurrentUserQuestion();
 
   const systemPrompt = `You are a helpful AI assistant. Your goal is to provide accurate, comprehensive answers based on the information you have gathered.
 
@@ -18,6 +26,11 @@ ${
     : "Based on the web searches and scraped content you have access to, provide a thorough and accurate answer to the user's question."
 }
 
+CONVERSATION HISTORY:
+${conversationHistory}
+
+CURRENT USER QUESTION: "${userQuestion}"
+
 Guidelines:
 - Use the information from scraped pages as your primary source
 - Always cite your sources using markdown links [title](url)
@@ -26,6 +39,7 @@ Guidelines:
 - If you're missing critical information, acknowledge the limitations
 - Structure your answer clearly with headings if appropriate
 - Never include raw URLs - always use markdown link format
+- IMPORTANT: Consider the full conversation history when crafting your answer. If the user is asking a follow-up question, make sure to reference and build upon the previous conversation context.
 
 Current Context:
 
@@ -35,9 +49,7 @@ ${context.getQueryHistory() || "No queries were performed."}
 Scrape History:
 ${context.getScrapeHistory() || "No pages were scraped."}
 
-User's Question: "${userQuestion}"
-
-Please provide a comprehensive answer based on the information you have gathered.`;
+Please provide a comprehensive answer based on the conversation history and the information you have gathered.`;
 
   return streamText({
     model,

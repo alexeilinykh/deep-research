@@ -5,10 +5,10 @@ import { env } from "~/env";
 import { SystemContext } from "./system-context";
 import { getNextAction, type OurMessageAnnotation } from "./get-next-action";
 import { answerQuestion } from "./answer-question";
-import type { StreamTextResult } from "ai";
+import type { StreamTextResult, Message } from "ai";
 
 export async function runAgentLoop(
-  userQuestion: string,
+  messages: Message[],
   options: {
     abortSignal?: AbortSignal;
     writeMessageAnnotation?: (annotation: OurMessageAnnotation) => void;
@@ -20,14 +20,15 @@ export async function runAgentLoop(
     writeMessageAnnotation = () => {},
     langfuseTraceId,
   } = options;
+
   // A persistent container for the state of our system
-  const ctx = new SystemContext();
+  const ctx = new SystemContext(messages);
 
   // A loop that continues until we have an answer
   // or we've taken 10 actions
   while (!ctx.shouldStop()) {
     // We choose the next action based on the state of our system
-    const nextAction = await getNextAction(ctx, userQuestion, langfuseTraceId);
+    const nextAction = await getNextAction(ctx, langfuseTraceId);
 
     // Send progress annotation to the UI
     writeMessageAnnotation({
@@ -85,7 +86,7 @@ export async function runAgentLoop(
         );
       }
     } else if (nextAction.type === "answer") {
-      return answerQuestion(ctx, userQuestion, { langfuseTraceId });
+      return answerQuestion(ctx, { langfuseTraceId });
     }
 
     // Increment the step counter after each action
@@ -94,5 +95,5 @@ export async function runAgentLoop(
 
   // If we've taken 10 actions and still don't have an answer,
   // we ask the LLM to give its best attempt at an answer
-  return answerQuestion(ctx, userQuestion, { isFinal: true, langfuseTraceId });
+  return answerQuestion(ctx, { isFinal: true, langfuseTraceId });
 }

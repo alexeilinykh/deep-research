@@ -1,4 +1,4 @@
-import { generateObject } from "ai";
+import { generateObject, type Message } from "ai";
 import { model } from "~/model";
 import { z } from "zod";
 import { SystemContext } from "./system-context";
@@ -58,9 +58,12 @@ export const actionSchema = z.object({
 
 export const getNextAction = async (
   context: SystemContext,
-  userQuestion: string,
   langfuseTraceId?: string,
 ) => {
+  // Get the conversation history and current user question from context
+  const conversationHistory = context.getMessageHistory();
+  const userQuestion = context.getCurrentUserQuestion();
+
   const result = await generateObject({
     model,
     schema: actionSchema,
@@ -78,7 +81,10 @@ You are a helpful AI assistant with access to real-time web search and scraping 
 
 Your goal is to gather comprehensive information to answer the user's question accurately and thoroughly.
 
-User's Question: "${userQuestion}"
+CONVERSATION HISTORY:
+${conversationHistory}
+
+CURRENT USER QUESTION: "${userQuestion}"
 
 Your workflow should be:
 1. If you need more information, SEARCH the web for relevant, up-to-date information from diverse sources
@@ -91,6 +97,7 @@ Guidelines:
 - Scrape multiple diverse sources (news sites, documentation, blogs, etc.)
 - Don't rely solely on search snippets - scrape pages for full content
 - Only answer when you have comprehensive information from scraped sources
+- IMPORTANT: Consider the full conversation history when deciding what action to take. If the user is asking a follow-up question, understand what they're referring to from the previous conversation.
 
 Current Context:
 
@@ -100,7 +107,7 @@ ${context.getQueryHistory() || "No queries performed yet."}
 Scrape History:
 ${context.getScrapeHistory() || "No pages scraped yet."}
 
-Based on the context above and the user's question, what should be the next action?
+Based on the conversation history, current context, and the user's question, what should be the next action?
     `,
   });
 

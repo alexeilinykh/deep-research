@@ -1,3 +1,5 @@
+import type { Message } from "ai";
+
 type QueryResultSearchResult = {
   date: string;
   title: string;
@@ -34,6 +36,15 @@ export class SystemContext {
    */
   private scrapeHistory: ScrapeResult[] = [];
 
+  /**
+   * The conversation message history
+   */
+  private messageHistory: Message[] = [];
+
+  constructor(messages: Message[] = []) {
+    this.messageHistory = [...messages];
+  }
+
   shouldStop() {
     return this.step >= 10;
   }
@@ -48,6 +59,25 @@ export class SystemContext {
 
   reportScrapes(scrapes: ScrapeResult[]) {
     this.scrapeHistory.push(...scrapes);
+  }
+
+  getMessageHistory(): string {
+    return this.messageHistory
+      .map((msg) => {
+        const role =
+          msg.role === "user"
+            ? "User"
+            : msg.role === "assistant"
+              ? "Assistant"
+              : msg.role;
+        return `<message role="${msg.role}">\n${msg.content}\n</message>`;
+      })
+      .join("\n\n");
+  }
+
+  getCurrentUserQuestion(): string {
+    const lastMessage = this.messageHistory[this.messageHistory.length - 1];
+    return lastMessage?.content || "";
   }
 
   getQueryHistory(): string {
