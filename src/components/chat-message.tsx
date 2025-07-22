@@ -1,5 +1,7 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import type { Message } from "ai";
+import { ReasoningSteps } from "./reasoning-steps";
+import type { OurMessageAnnotation } from "~/get-next-action";
 
 export type MessagePart = NonNullable<Message["parts"]>[number];
 
@@ -7,6 +9,7 @@ interface ChatMessageProps {
   parts: MessagePart[];
   role: string;
   userName: string;
+  annotations: OurMessageAnnotation[];
 }
 
 const components: Components = {
@@ -65,7 +68,12 @@ const ToolInvocation = ({
   );
 };
 
-export const ChatMessage = ({ parts, role, userName }: ChatMessageProps) => {
+export const ChatMessage = ({
+  parts,
+  role,
+  userName,
+  annotations = [],
+}: ChatMessageProps) => {
   const isAI = role === "assistant";
 
   return (
@@ -78,6 +86,9 @@ export const ChatMessage = ({ parts, role, userName }: ChatMessageProps) => {
         <p className="mb-2 text-sm font-semibold text-gray-400">
           {isAI ? "AI" : userName}
         </p>
+
+        {/* Show reasoning steps only for AI messages */}
+        {isAI && <ReasoningSteps annotations={annotations} />}
 
         <div className="prose prose-invert max-w-none">
           {parts.map((part, index) => {

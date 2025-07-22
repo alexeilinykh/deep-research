@@ -6,22 +6,40 @@ import { SystemContext } from "./system-context";
 // Action types for the next action decision
 export interface SearchAction {
   type: "search";
+  title: string;
+  reasoning: string;
   query: string;
 }
 
 export interface ScrapeAction {
   type: "scrape";
+  title: string;
+  reasoning: string;
   urls: string[];
 }
 
 export interface AnswerAction {
   type: "answer";
+  title: string;
+  reasoning: string;
 }
 
 export type Action = SearchAction | ScrapeAction | AnswerAction;
 
+// Type for message annotations
+export type OurMessageAnnotation = {
+  type: "NEW_ACTION";
+  action: Action;
+};
+
 // Schema for structured LLM output - avoiding z.union for better LLM compatibility
 export const actionSchema = z.object({
+  title: z
+    .string()
+    .describe(
+      "The title of the action, to be displayed in the UI. Be extremely concise. 'Searching Saka's injury history', 'Checking HMRC industrial action', 'Comparing toaster ovens'",
+    ),
+  reasoning: z.string().describe("The reason you chose this step."),
   type: z.enum(["search", "scrape", "answer"]).describe(
     `The type of action to take.
       - 'search': Search the web for more information.

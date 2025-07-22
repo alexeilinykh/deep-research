@@ -3,14 +3,18 @@ import { searchSerper } from "~/serper";
 import { bulkCrawlWebsites } from "~/server/scraper";
 import { env } from "~/env";
 import { SystemContext } from "./system-context";
-import { getNextAction } from "./get-next-action";
+import { getNextAction, type OurMessageAnnotation } from "./get-next-action";
 import { answerQuestion } from "./answer-question";
 import type { StreamTextResult } from "ai";
 
 export async function runAgentLoop(
   userQuestion: string,
-  abortSignal?: AbortSignal,
+  options: {
+    abortSignal?: AbortSignal;
+    writeMessageAnnotation?: (annotation: OurMessageAnnotation) => void;
+  } = {},
 ): Promise<StreamTextResult<{}, string>> {
+  const { abortSignal, writeMessageAnnotation = () => {} } = options;
   // A persistent container for the state of our system
   const ctx = new SystemContext();
 
@@ -19,6 +23,12 @@ export async function runAgentLoop(
   while (!ctx.shouldStop()) {
     // We choose the next action based on the state of our system
     const nextAction = await getNextAction(ctx, userQuestion);
+
+    // Send progress annotation to the UI
+    writeMessageAnnotation({
+      type: "NEW_ACTION",
+      action: nextAction as any, // Type assertion needed due to Zod schema differences
+    } satisfies OurMessageAnnotation);
 
     // We execute the action and update the state of our system
     if (nextAction.type === "search") {

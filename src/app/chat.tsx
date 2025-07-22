@@ -73,6 +73,7 @@ export const ChatPage = ({
                 parts={message.parts}
                 role={message.role}
                 userName={userName}
+                annotations={message.annotations as any}
               />
             ))}
           </StickToBottom.Content>
