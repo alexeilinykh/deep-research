@@ -17,6 +17,13 @@ type ScrapeResult = {
   result: string;
 };
 
+type LocationHints = {
+  latitude?: string;
+  longitude?: string;
+  city?: string;
+  country?: string;
+};
+
 const toQueryResult = (query: QueryResultSearchResult) =>
   [`### ${query.date} - ${query.title}`, query.url, query.snippet].join("\n\n");
 
@@ -41,8 +48,14 @@ export class SystemContext {
    */
   private messageHistory: Message[] = [];
 
-  constructor(messages: Message[] = []) {
+  /**
+   * User's location information
+   */
+  private locationHints: LocationHints;
+
+  constructor(messages: Message[] = [], locationHints: LocationHints = {}) {
     this.messageHistory = [...messages];
+    this.locationHints = locationHints;
   }
 
   shouldStop() {
@@ -102,5 +115,28 @@ export class SystemContext {
         ].join("\n\n"),
       )
       .join("\n\n");
+  }
+
+  getLocationContext(): string {
+    if (!this.locationHints.latitude && !this.locationHints.city) {
+      return "";
+    }
+
+    const parts = [];
+    if (this.locationHints.city) {
+      parts.push(`City: ${this.locationHints.city}`);
+    }
+    if (this.locationHints.country) {
+      parts.push(`Country: ${this.locationHints.country}`);
+    }
+    if (this.locationHints.latitude && this.locationHints.longitude) {
+      parts.push(
+        `Coordinates: ${this.locationHints.latitude}, ${this.locationHints.longitude}`,
+      );
+    }
+
+    return parts.length > 0
+      ? `\nUSER LOCATION CONTEXT:\n${parts.join("\n")}\n`
+      : "";
   }
 }

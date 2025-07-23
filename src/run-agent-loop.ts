@@ -14,6 +14,12 @@ export async function runAgentLoop(
     writeMessageAnnotation?: (annotation: OurMessageAnnotation) => void;
     langfuseTraceId?: string;
     onFinish?: Parameters<typeof streamText>[0]["onFinish"];
+    locationHints?: {
+      latitude?: string;
+      longitude?: string;
+      city?: string;
+      country?: string;
+    };
   } = {},
 ): Promise<StreamTextResult<{}, string>> {
   const {
@@ -21,10 +27,11 @@ export async function runAgentLoop(
     writeMessageAnnotation = () => {},
     langfuseTraceId,
     onFinish,
+    locationHints,
   } = options;
 
   // A persistent container for the state of our system
-  const ctx = new SystemContext(messages);
+  const ctx = new SystemContext(messages, locationHints);
 
   // A loop that continues until we have an answer
   // or we've taken 10 actions

@@ -63,6 +63,7 @@ export const getNextAction = async (
   // Get the conversation history and current user question from context
   const conversationHistory = context.getMessageHistory();
   const userQuestion = context.getCurrentUserQuestion();
+  const locationContext = context.getLocationContext();
 
   const result = await generateObject({
     model,
@@ -80,7 +81,7 @@ export const getNextAction = async (
 You are a helpful AI assistant with access to real-time web search and scraping capabilities. The current date and time is ${new Date().toLocaleString()}.
 
 Your goal is to gather comprehensive information to answer the user's question accurately and thoroughly.
-
+${locationContext}
 CONVERSATION HISTORY:
 ${conversationHistory}
 

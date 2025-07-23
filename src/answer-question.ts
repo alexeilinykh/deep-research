@@ -21,6 +21,7 @@ export function answerQuestion(
   // Get the conversation history and current user question from context
   const conversationHistory = context.getMessageHistory();
   const userQuestion = context.getCurrentUserQuestion();
+  const locationContext = context.getLocationContext();
 
   const systemPrompt = `You are a helpful AI assistant. Your goal is to provide accurate, comprehensive answers based on the information you have gathered.
 
@@ -29,7 +30,7 @@ ${
     ? "IMPORTANT: This is your final attempt to answer the question. You may not have all the information you need, but you must provide your best possible answer based on what you have gathered so far."
     : "Based on the web searches and scraped content you have access to, provide a thorough and accurate answer to the user's question."
 }
-
+${locationContext}
 CONVERSATION HISTORY:
 ${conversationHistory}
 

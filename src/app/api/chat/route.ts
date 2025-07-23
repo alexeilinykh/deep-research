@@ -16,6 +16,7 @@ import { env } from "~/env";
 import { streamFromDeepSearch } from "~/deep-search";
 import type { OurMessageAnnotation } from "~/get-next-action";
 import { generateChatTitle } from "~/generate-chat-title";
+import { geolocation } from "@vercel/functions";
 
 const langfuse = new Langfuse({
   environment: env.NODE_ENV,
@@ -29,6 +30,24 @@ export async function POST(request: Request) {
   if (!session) {
     return new Response("Unauthorized", { status: 401 });
   }
+
+  // Mock location headers for development
+  if (process.env.NODE_ENV === "development") {
+    request.headers.set("x-vercel-ip-country", "US");
+    request.headers.set("x-vercel-ip-country-region", "CA");
+    request.headers.set("x-vercel-ip-city", "San Francisco");
+    request.headers.set("x-vercel-ip-latitude", "37.7749");
+    request.headers.set("x-vercel-ip-longitude", "-122.4194");
+  }
+
+  // Get user's location
+  const { longitude, latitude, city, country } = geolocation(request);
+  const locationHints = {
+    longitude,
+    latitude,
+    city,
+    country,
+  };
 
   // Use user id from session
   const userId = session.user.id;
@@ -232,6 +251,7 @@ export async function POST(request: Request) {
           },
         },
         writeMessageAnnotation,
+        locationHints,
         onFinish: async ({ response }) => {
           const responseMessages = response.messages;
 

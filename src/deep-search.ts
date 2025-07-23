@@ -13,6 +13,12 @@ export async function streamFromDeepSearch(opts: {
   onFinish: Parameters<typeof streamText>[0]["onFinish"];
   telemetry: TelemetrySettings;
   writeMessageAnnotation?: (annotation: OurMessageAnnotation) => void;
+  locationHints?: {
+    latitude?: string;
+    longitude?: string;
+    city?: string;
+    country?: string;
+  };
 }): Promise<StreamTextResult<{}, string>> {
   // Extract langfuseTraceId from telemetry metadata if available
   const langfuseTraceId = opts.telemetry.metadata?.langfuseTraceId as
@@ -24,6 +30,7 @@ export async function streamFromDeepSearch(opts: {
     writeMessageAnnotation: opts.writeMessageAnnotation,
     langfuseTraceId,
     onFinish: opts.onFinish,
+    locationHints: opts.locationHints,
   });
 }
 
