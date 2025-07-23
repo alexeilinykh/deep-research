@@ -225,7 +225,7 @@ export async function POST(request: Request) {
           },
         },
         writeMessageAnnotation,
-        onFinish: async ({ text, finishReason, usage, response }) => {
+        onFinish: async ({ response }) => {
           const responseMessages = response.messages;
 
           const updatedMessages = appendResponseMessages({
@@ -233,20 +233,12 @@ export async function POST(request: Request) {
             responseMessages,
           });
 
-          const lastMessage = messages[messages.length - 1];
+          const lastMessage = updatedMessages[updatedMessages.length - 1];
           if (!lastMessage) {
             return;
           }
 
-          // Add the annotations to the last assistant message (the response)
-          const lastAssistantMessage =
-            updatedMessages[updatedMessages.length - 1];
-          if (
-            lastAssistantMessage &&
-            lastAssistantMessage.role === "assistant"
-          ) {
-            lastAssistantMessage.annotations = annotations as any;
-          }
+          lastMessage.annotations = annotations as any;
 
           // Update the chat with all messages including the AI response
           const updateChatSpan = trace.span({

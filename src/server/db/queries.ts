@@ -39,7 +39,7 @@ export const upsertChat = async (opts: {
       chatId,
       role: message.role,
       parts: message.parts,
-      annotations: message.annotations || null,
+      annotations: message.annotations,
       order: index,
     })),
   );
@@ -67,7 +67,7 @@ export const getChat = async (chatId: string, userId: string) => {
     id: msg.id,
     role: msg.role,
     parts: msg.parts,
-    annotations: msg.annotations,
+    annotations: msg.annotations ?? [],
     content: "",
   }));
 

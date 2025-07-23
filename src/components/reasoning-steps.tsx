@@ -8,7 +8,7 @@ export const ReasoningSteps = ({
 }: {
   annotations: OurMessageAnnotation[];
 }) => {
-  const [openStep, setOpenStep] = useState<number | null>(null);
+  const [closedStep, setClosedStep] = useState<number | null>(null);
 
   if (annotations.length === 0) return null;
 
@@ -16,11 +16,11 @@ export const ReasoningSteps = ({
     <div className="mb-4 w-full">
       <ul className="space-y-1">
         {annotations.map((annotation, index) => {
-          const isOpen = openStep === index;
+          const isOpen = closedStep !== index;
           return (
             <li key={index} className="relative">
               <button
-                onClick={() => setOpenStep(isOpen ? null : index)}
+                onClick={() => setClosedStep(isOpen ? index : null)}
                 className={`min-w-34 flex w-full flex-shrink-0 items-center rounded px-2 py-1 text-left text-sm transition-colors ${
                   isOpen
                     ? "bg-gray-700 text-gray-200"

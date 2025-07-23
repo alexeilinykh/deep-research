@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { isNewChatCreated } from "~/lib/utils";
 import type { Message } from "ai";
 import { StickToBottom } from "use-stick-to-bottom";
+import type { OurMessageAnnotation } from "~/get-next-action";
 
 interface ChatProps {
   userName: string;
@@ -67,15 +68,17 @@ export const ChatPage = ({
             role="log"
             aria-label="Chat messages"
           >
-            {messages.map((message, index) => (
-              <ChatMessage
-                key={index}
-                parts={message.parts}
-                role={message.role}
-                userName={userName}
-                annotations={message.annotations as any}
-              />
-            ))}
+            {messages.map((message, index) => {
+              return (
+                <ChatMessage
+                  key={index}
+                  parts={message.parts ?? []}
+                  role={message.role}
+                  userName={userName}
+                  annotations={(message.annotations ?? []) as any}
+                />
+              );
+            })}
           </StickToBottom.Content>
         </StickToBottom>
 
