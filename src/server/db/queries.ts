@@ -6,7 +6,7 @@ import { eq, desc } from "drizzle-orm";
 export const upsertChat = async (opts: {
   userId: string;
   chatId: string;
-  title: string;
+  title?: string;
   messages: Message[];
 }) => {
   const { userId, chatId, title, messages: chatMessages } = opts;
@@ -24,12 +24,17 @@ export const upsertChat = async (opts: {
     }
     // Delete all existing messages
     await db.delete(messages).where(eq(messages.chatId, chatId));
+
+    // Update the chat title if provided
+    if (title) {
+      await db.update(chats).set({ title }).where(eq(chats.id, chatId));
+    }
   } else {
     // Create new chat
     await db.insert(chats).values({
       id: chatId,
       userId,
-      title,
+      title: title || "New Chat",
     });
   }
 
