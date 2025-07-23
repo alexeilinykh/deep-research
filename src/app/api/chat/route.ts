@@ -14,6 +14,7 @@ import { eq } from "drizzle-orm";
 import { Langfuse } from "langfuse";
 import { env } from "~/env";
 import { streamFromDeepSearch } from "~/deep-search";
+import type { OurMessageAnnotation } from "~/get-next-action";
 
 const langfuse = new Langfuse({
   environment: env.NODE_ENV,
@@ -204,6 +205,16 @@ export async function POST(request: Request) {
         });
       }
 
+      // Collect annotations in memory
+      const annotations: OurMessageAnnotation[] = [];
+
+      const writeMessageAnnotation = (annotation: OurMessageAnnotation) => {
+        // Save the annotation in-memory
+        annotations.push(annotation);
+        // Send it to the client
+        dataStream.writeMessageAnnotation(annotation as any);
+      };
+
       const result = await streamFromDeepSearch({
         messages,
         telemetry: {
@@ -213,9 +224,7 @@ export async function POST(request: Request) {
             langfuseTraceId: trace.id,
           },
         },
-        writeMessageAnnotation: (annotation) => {
-          dataStream.writeMessageAnnotation(annotation as any);
-        },
+        writeMessageAnnotation,
         onFinish: async ({ text, finishReason, usage, response }) => {
           const responseMessages = response.messages;
 
@@ -227,6 +236,16 @@ export async function POST(request: Request) {
           const lastMessage = messages[messages.length - 1];
           if (!lastMessage) {
             return;
+          }
+
+          // Add the annotations to the last assistant message (the response)
+          const lastAssistantMessage =
+            updatedMessages[updatedMessages.length - 1];
+          if (
+            lastAssistantMessage &&
+            lastAssistantMessage.role === "assistant"
+          ) {
+            lastAssistantMessage.annotations = annotations as any;
           }
 
           // Update the chat with all messages including the AI response

@@ -5,7 +5,7 @@ import { env } from "~/env";
 import { SystemContext } from "./system-context";
 import { getNextAction, type OurMessageAnnotation } from "./get-next-action";
 import { answerQuestion } from "./answer-question";
-import type { StreamTextResult, Message } from "ai";
+import type { StreamTextResult, Message, streamText } from "ai";
 
 export async function runAgentLoop(
   messages: Message[],
@@ -13,12 +13,14 @@ export async function runAgentLoop(
     abortSignal?: AbortSignal;
     writeMessageAnnotation?: (annotation: OurMessageAnnotation) => void;
     langfuseTraceId?: string;
+    onFinish?: Parameters<typeof streamText>[0]["onFinish"];
   } = {},
 ): Promise<StreamTextResult<{}, string>> {
   const {
     abortSignal,
     writeMessageAnnotation = () => {},
     langfuseTraceId,
+    onFinish,
   } = options;
 
   // A persistent container for the state of our system
@@ -86,7 +88,7 @@ export async function runAgentLoop(
         );
       }
     } else if (nextAction.type === "answer") {
-      return answerQuestion(ctx, { langfuseTraceId });
+      return answerQuestion(ctx, { langfuseTraceId, onFinish });
     }
 
     // Increment the step counter after each action
@@ -95,5 +97,5 @@ export async function runAgentLoop(
 
   // If we've taken 10 actions and still don't have an answer,
   // we ask the LLM to give its best attempt at an answer
-  return answerQuestion(ctx, { isFinal: true, langfuseTraceId });
+  return answerQuestion(ctx, { isFinal: true, langfuseTraceId, onFinish });
 }

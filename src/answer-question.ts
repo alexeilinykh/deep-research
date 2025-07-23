@@ -10,9 +10,13 @@ import { markdownJoinerTransform } from "./markdown-joiner";
 
 export function answerQuestion(
   context: SystemContext,
-  options: { isFinal?: boolean; langfuseTraceId?: string } = {},
+  options: {
+    isFinal?: boolean;
+    langfuseTraceId?: string;
+    onFinish?: Parameters<typeof streamText>[0]["onFinish"];
+  } = {},
 ): StreamTextResult<{}, string> {
-  const { isFinal = false, langfuseTraceId } = options;
+  const { isFinal = false, langfuseTraceId, onFinish } = options;
 
   // Get the conversation history and current user question from context
   const conversationHistory = context.getMessageHistory();
@@ -54,6 +58,7 @@ Please provide a comprehensive answer based on the conversation history and the 
   return streamText({
     model,
     prompt: systemPrompt,
+    onFinish,
     ...(langfuseTraceId && {
       experimental_telemetry: {
         isEnabled: true,

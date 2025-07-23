@@ -23,6 +23,7 @@ export async function streamFromDeepSearch(opts: {
   return await runAgentLoop(opts.messages, {
     writeMessageAnnotation: opts.writeMessageAnnotation,
     langfuseTraceId,
+    onFinish: opts.onFinish,
   });
 }
 
