@@ -5,6 +5,7 @@ import { env } from "~/env";
 import { SystemContext } from "./system-context";
 import { getNextAction, type OurMessageAnnotation } from "./get-next-action";
 import { answerQuestion } from "./answer-question";
+import { summarizeURL } from "./summarize-url";
 import type { StreamTextResult, Message, streamText } from "ai";
 
 export async function runAgentLoop(
@@ -62,9 +63,12 @@ export async function runAgentLoop(
       // Scrape all the URLs from the search results
       const scrapeResults = await bulkCrawlWebsites({ urls: urlsToScrape });
 
-      // Combine search results with scraped content
-      const combinedResults = searchResults.organic.map(
-        (searchResult, index) => {
+      // Get conversation history for summarization context
+      const conversationHistory = ctx.getMessageHistory();
+
+      // Summarize each scraped result in parallel
+      const summarizationPromises = searchResults.organic.map(
+        async (searchResult) => {
           const correspondingScrape = scrapeResults.results.find(
             (scrapeResult) => scrapeResult.url === searchResult.link,
           );
@@ -73,20 +77,45 @@ export async function runAgentLoop(
             ? correspondingScrape.result.data
             : "Content could not be scraped";
 
-          return {
-            date: searchResult.date || "No date",
-            title: searchResult.title,
+          // Only summarize if we have actual content
+          if (scrapedContent === "Content could not be scraped") {
+            return {
+              date: searchResult.date || "No date",
+              title: searchResult.title,
+              url: searchResult.link,
+              snippet: searchResult.snippet,
+              summary: "Content could not be scraped",
+            };
+          }
+
+          const summarized = await summarizeURL({
             url: searchResult.link,
+            title: searchResult.title,
             snippet: searchResult.snippet,
-            scrapedContent,
+            date: searchResult.date || "No date",
+            content: scrapedContent,
+            query: nextAction.query!,
+            conversationHistory,
+            langfuseTraceId,
+          });
+
+          return {
+            date: summarized.date,
+            title: summarized.title,
+            url: summarized.url,
+            snippet: summarized.snippet,
+            summary: summarized.summary,
           };
         },
       );
 
-      // Report the combined search and scrape results to the context
+      // Wait for all summarizations to complete
+      const summarizedResults = await Promise.all(summarizationPromises);
+
+      // Report the search results with summaries to the context
       ctx.reportSearch({
         query: nextAction.query,
-        results: combinedResults,
+        results: summarizedResults,
       });
     } else if (nextAction.type === "answer") {
       return answerQuestion(ctx, { langfuseTraceId, onFinish });
