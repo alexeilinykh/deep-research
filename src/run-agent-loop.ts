@@ -56,44 +56,38 @@ export async function runAgentLoop(
         abortSignal,
       );
 
-      // Report the search results to the context
-      ctx.reportQueries([
-        {
-          query: nextAction.query,
-          results: searchResults.organic.map((result) => ({
-            date: result.date || "No date",
-            title: result.title,
-            url: result.link,
-            snippet: result.snippet,
-          })),
+      // Extract URLs from search results for scraping
+      const urlsToScrape = searchResults.organic.map((result) => result.link);
+
+      // Scrape all the URLs from the search results
+      const scrapeResults = await bulkCrawlWebsites({ urls: urlsToScrape });
+
+      // Combine search results with scraped content
+      const combinedResults = searchResults.organic.map(
+        (searchResult, index) => {
+          const correspondingScrape = scrapeResults.results.find(
+            (scrapeResult) => scrapeResult.url === searchResult.link,
+          );
+
+          const scrapedContent = correspondingScrape?.result.success
+            ? correspondingScrape.result.data
+            : "Content could not be scraped";
+
+          return {
+            date: searchResult.date || "No date",
+            title: searchResult.title,
+            url: searchResult.link,
+            snippet: searchResult.snippet,
+            scrapedContent,
+          };
         },
-      ]);
-    } else if (nextAction.type === "scrape") {
-      if (!nextAction.urls || nextAction.urls.length === 0) {
-        throw new Error("Scrape action requires URLs");
-      }
+      );
 
-      const scrapeResults = await bulkCrawlWebsites({ urls: nextAction.urls });
-
-      // Report the scrape results to the context
-      if (scrapeResults.success) {
-        ctx.reportScrapes(
-          scrapeResults.results.map((result) => ({
-            url: result.url,
-            result: result.result.data,
-          })),
-        );
-      } else {
-        // Handle partial success case - only report successful scrapes
-        ctx.reportScrapes(
-          scrapeResults.results
-            .filter((result) => result.result.success)
-            .map((result) => ({
-              url: result.url,
-              result: (result.result as any).data,
-            })),
-        );
-      }
+      // Report the combined search and scrape results to the context
+      ctx.reportSearch({
+        query: nextAction.query,
+        results: combinedResults,
+      });
     } else if (nextAction.type === "answer") {
       return answerQuestion(ctx, { langfuseTraceId, onFinish });
     }

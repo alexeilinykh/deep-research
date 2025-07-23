@@ -1,20 +1,16 @@
 import type { Message } from "ai";
 
-type QueryResultSearchResult = {
+type SearchResult = {
   date: string;
   title: string;
   url: string;
   snippet: string;
+  scrapedContent: string;
 };
 
-type QueryResult = {
+type SearchHistoryEntry = {
   query: string;
-  results: QueryResultSearchResult[];
-};
-
-type ScrapeResult = {
-  url: string;
-  result: string;
+  results: SearchResult[];
 };
 
 type LocationHints = {
@@ -24,9 +20,6 @@ type LocationHints = {
   country?: string;
 };
 
-const toQueryResult = (query: QueryResultSearchResult) =>
-  [`### ${query.date} - ${query.title}`, query.url, query.snippet].join("\n\n");
-
 export class SystemContext {
   /**
    * The current step in the loop
@@ -34,14 +27,9 @@ export class SystemContext {
   private step = 0;
 
   /**
-   * The history of all queries searched
+   * The history of all searches (including scraped content)
    */
-  private queryHistory: QueryResult[] = [];
-
-  /**
-   * The history of all URLs scraped
-   */
-  private scrapeHistory: ScrapeResult[] = [];
+  private searchHistory: SearchHistoryEntry[] = [];
 
   /**
    * The conversation message history
@@ -66,12 +54,8 @@ export class SystemContext {
     this.step++;
   }
 
-  reportQueries(queries: QueryResult[]) {
-    this.queryHistory.push(...queries);
-  }
-
-  reportScrapes(scrapes: ScrapeResult[]) {
-    this.scrapeHistory.push(...scrapes);
+  reportSearch(search: SearchHistoryEntry) {
+    this.searchHistory.push(search);
   }
 
   getMessageHistory(): string {
@@ -93,25 +77,21 @@ export class SystemContext {
     return lastMessage?.content || "";
   }
 
-  getQueryHistory(): string {
-    return this.queryHistory
-      .map((query) =>
+  getSearchHistory(): string {
+    return this.searchHistory
+      .map((search) =>
         [
-          `## Query: "${query.query}"`,
-          ...query.results.map(toQueryResult),
-        ].join("\n\n"),
-      )
-      .join("\n\n");
-  }
-
-  getScrapeHistory(): string {
-    return this.scrapeHistory
-      .map((scrape) =>
-        [
-          `## Scrape: "${scrape.url}"`,
-          `<scrape_result>`,
-          scrape.result,
-          `</scrape_result>`,
+          `## Query: "${search.query}"`,
+          ...search.results.map((result) =>
+            [
+              `### ${result.date} - ${result.title}`,
+              result.url,
+              result.snippet,
+              `<scrape_result>`,
+              result.scrapedContent,
+              `</scrape_result>`,
+            ].join("\n\n"),
+          ),
         ].join("\n\n"),
       )
       .join("\n\n");

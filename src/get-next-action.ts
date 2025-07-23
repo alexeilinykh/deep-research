@@ -11,20 +11,13 @@ export interface SearchAction {
   query: string;
 }
 
-export interface ScrapeAction {
-  type: "scrape";
-  title: string;
-  reasoning: string;
-  urls: string[];
-}
-
 export interface AnswerAction {
   type: "answer";
   title: string;
   reasoning: string;
 }
 
-export type Action = SearchAction | ScrapeAction | AnswerAction;
+export type Action = SearchAction | AnswerAction;
 
 // Type for message annotations
 export type OurMessageAnnotation = {
@@ -40,19 +33,14 @@ export const actionSchema = z.object({
       "The title of the action, to be displayed in the UI. Be extremely concise. 'Searching Saka's injury history', 'Checking HMRC industrial action', 'Comparing toaster ovens'",
     ),
   reasoning: z.string().describe("The reason you chose this step."),
-  type: z.enum(["search", "scrape", "answer"]).describe(
+  type: z.enum(["search", "answer"]).describe(
     `The type of action to take.
-      - 'search': Search the web for more information.
-      - 'scrape': Scrape a URL.
+      - 'search': Search the web for information and automatically scrape the top results for detailed content.
       - 'answer': Answer the user's question and complete the loop.`,
   ),
   query: z
     .string()
     .describe("The query to search for. Required if type is 'search'.")
-    .optional(),
-  urls: z
-    .array(z.string())
-    .describe("The URLs to scrape. Required if type is 'scrape'.")
     .optional(),
 });
 
@@ -88,25 +76,21 @@ ${conversationHistory}
 CURRENT USER QUESTION: "${userQuestion}"
 
 Your workflow should be:
-1. If you need more information, SEARCH the web for relevant, up-to-date information from diverse sources
-2. If you have found relevant URLs in search results, SCRAPE those pages to get full content (4-6 URLs maximum per scrape action)
-3. When you have sufficient information from multiple sources, ANSWER the user's question
+1. If you need more information, SEARCH the web for relevant, up-to-date information from diverse sources. The search will automatically scrape the top results to get full content.
+2. When you have sufficient information from multiple sources, ANSWER the user's question
 
 Guidelines:
 - Always search for current, authoritative information
 - Prioritize official sources and reputable websites
-- Scrape multiple diverse sources (news sites, documentation, blogs, etc.)
-- Don't rely solely on search snippets - scrape pages for full content
+- The search action will automatically scrape multiple diverse sources (news sites, documentation, blogs, etc.)
+- Don't rely solely on search snippets - the full scraped content will be available
 - Only answer when you have comprehensive information from scraped sources
 - IMPORTANT: Consider the full conversation history when deciding what action to take. If the user is asking a follow-up question, understand what they're referring to from the previous conversation.
 
 Current Context:
 
-Query History:
-${context.getQueryHistory() || "No queries performed yet."}
-
-Scrape History:
-${context.getScrapeHistory() || "No pages scraped yet."}
+Search History:
+${context.getSearchHistory() || "No searches performed yet."}
 
 Based on the conversation history, current context, and the user's question, what should be the next action?
     `,

@@ -48,11 +48,8 @@ Guidelines:
 
 Current Context:
 
-Query History:
-${context.getQueryHistory() || "No queries were performed."}
-
-Scrape History:
-${context.getScrapeHistory() || "No pages were scraped."}
+Search History:
+${context.getSearchHistory() || "No searches were performed."}
 
 Please provide a comprehensive answer based on the conversation history and the information you have gathered.`;
 
