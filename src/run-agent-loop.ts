@@ -7,6 +7,7 @@ import { getNextAction, type OurMessageAnnotation } from "./get-next-action";
 import { answerQuestion } from "./answer-question";
 import { summarizeURL } from "./summarize-url";
 import { rewriteQueries } from "./query-rewriter";
+import { checkIsSafe, createRefusalResponse } from "./guardrails";
 import type { StreamTextResult, Message, streamText } from "ai";
 
 export async function runAgentLoop(
@@ -34,6 +35,14 @@ export async function runAgentLoop(
 
   // A persistent container for the state of our system
   const ctx = new SystemContext(messages, locationHints);
+
+  // Step 0: Safety check - must be done before any processing
+  const safetyCheck = await checkIsSafe(ctx, langfuseTraceId);
+
+  if (safetyCheck.classification === "refuse") {
+    // Return refusal response immediately without any search or processing
+    return createRefusalResponse(safetyCheck.reason, langfuseTraceId);
+  }
 
   // A loop that continues until we have an answer
   // or we've taken 10 actions
