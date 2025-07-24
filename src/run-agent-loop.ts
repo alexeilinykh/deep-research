@@ -8,6 +8,10 @@ import { answerQuestion } from "./answer-question";
 import { summarizeURL } from "./summarize-url";
 import { rewriteQueries } from "./query-rewriter";
 import { checkIsSafe, createRefusalResponse } from "./guardrails";
+import {
+  checkIfQuestionNeedsClarification,
+  createClarificationRequest,
+} from "./clarification";
 import type { StreamTextResult, Message, streamText } from "ai";
 
 export async function runAgentLoop(
@@ -44,10 +48,25 @@ export async function runAgentLoop(
     return createRefusalResponse(safetyCheck.reason, langfuseTraceId);
   }
 
+  // Step 1: Clarification check - ensure the question is clear and specific
+  const clarificationResult = await checkIfQuestionNeedsClarification(
+    ctx,
+    langfuseTraceId,
+  );
+
+  if (clarificationResult.needsClarification) {
+    // Return clarification request to get more specific information from user
+    return createClarificationRequest(
+      ctx,
+      clarificationResult.reason!,
+      langfuseTraceId,
+    );
+  }
+
   // A loop that continues until we have an answer
   // or we've taken 10 actions
   while (!ctx.shouldStop()) {
-    // Step 1: Generate queries using the query rewriter
+    // Step 2: Generate queries using the query rewriter
     const queryRewriterResult = await rewriteQueries(ctx, langfuseTraceId);
 
     // Send the planning annotation to the UI
@@ -61,7 +80,7 @@ export async function runAgentLoop(
       } as any,
     } satisfies OurMessageAnnotation);
 
-    // Step 2: Execute all queries in parallel to get search results
+    // Step 3: Execute all queries in parallel to get search results
     const allSearchPromises = queryRewriterResult.queries.map(async (query) => {
       const searchResults = await searchSerper(
         { q: query, num: env.SEARCH_RESULTS_COUNT },
@@ -76,7 +95,7 @@ export async function runAgentLoop(
     // Wait for all searches to complete
     const allQueryResults = await Promise.all(allSearchPromises);
 
-    // Step 3: Collect and deduplicate all sources
+    // Step 4: Collect and deduplicate all sources
     const allSources = new Map<
       string,
       {
@@ -111,7 +130,7 @@ export async function runAgentLoop(
 
     const uniqueSources = Array.from(allSources.values());
 
-    // Step 4: Send single sources annotation to UI
+    // Step 5: Send single sources annotation to UI
     writeMessageAnnotation({
       type: "SOURCES_FOUND",
       title: `Found ${uniqueSources.length} unique sources`,
@@ -125,7 +144,7 @@ export async function runAgentLoop(
       query: `Multiple queries: ${queryRewriterResult.queries.join(", ")}`,
     });
 
-    // Step 5: Scrape and summarize all unique sources
+    // Step 6: Scrape and summarize all unique sources
     const urlsToScrape = uniqueSources.map((source) => source.url);
     const scrapeResults = await bulkCrawlWebsites({ urls: urlsToScrape });
     const conversationHistory = ctx.getMessageHistory();
@@ -183,12 +202,12 @@ export async function runAgentLoop(
       }),
     );
 
-    // Step 6: Save all search results to the context
+    // Step 7: Save all search results to the context
     searchResultsForContext.forEach((searchResult) => {
       ctx.reportSearch(searchResult);
     });
 
-    // Step 7: Evaluate whether to continue or answer based on current context
+    // Step 8: Evaluate whether to continue or answer based on current context
     const nextAction = await getNextAction(ctx, langfuseTraceId);
 
     // Store the feedback for future query rewriting (only if provided)
