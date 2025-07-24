@@ -20,6 +20,15 @@ type LocationHints = {
   country?: string;
 };
 
+type UsageEntry = {
+  source: string;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+};
+
 export class SystemContext {
   /**
    * The current step in the loop
@@ -46,6 +55,11 @@ export class SystemContext {
    */
   private latestFeedback: string | null = null;
 
+  /**
+   * Usage tracking for all LLM calls
+   */
+  private usageEntries: UsageEntry[] = [];
+
   constructor(messages: Message[] = [], locationHints: LocationHints = {}) {
     this.messageHistory = [...messages];
     this.locationHints = locationHints;
@@ -69,6 +83,36 @@ export class SystemContext {
 
   getLatestFeedback(): string | null {
     return this.latestFeedback;
+  }
+
+  reportUsage(
+    source: string,
+    usage: {
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+    },
+  ) {
+    this.usageEntries.push({ source, usage });
+  }
+
+  getTotalUsage(): {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  } {
+    return this.usageEntries.reduce(
+      (total, entry) => ({
+        promptTokens: total.promptTokens + entry.usage.promptTokens,
+        completionTokens: total.completionTokens + entry.usage.completionTokens,
+        totalTokens: total.totalTokens + entry.usage.totalTokens,
+      }),
+      { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    );
+  }
+
+  getUsageEntries(): UsageEntry[] {
+    return [...this.usageEntries];
   }
 
   getMessageHistory(): string {

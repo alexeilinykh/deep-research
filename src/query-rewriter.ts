@@ -81,5 +81,10 @@ ${latestFeedback || "No previous feedback available."}
 Based on the conversation history, previous searches, and especially the evaluator feedback, create a comprehensive research plan and generate the next set of search queries needed to address the specific information gaps identified by the evaluator.`,
   });
 
+  // Report usage to context
+  if (result.usage) {
+    context.reportUsage("query-rewriter", result.usage);
+  }
+
   return result.object;
 };

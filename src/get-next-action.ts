@@ -46,9 +46,13 @@ export type OurMessageAnnotation =
       title: string;
       sources: SourceInfo[];
       query: string;
-    };
-
-// Schema for structured LLM output - avoiding z.union for better LLM compatibility
+    }
+  | {
+      type: "USAGE_REPORT";
+      totalTokens: number;
+      promptTokens: number;
+      completionTokens: number;
+    }; // Schema for structured LLM output - avoiding z.union for better LLM compatibility
 export const actionSchema = z.object({
   title: z
     .string()
@@ -128,6 +132,11 @@ When choosing 'continue', in your feedback be specific about:
 Provide your assessment of the current information state and next action.
     `,
   });
+
+  // Report usage to context
+  if (result.usage) {
+    context.reportUsage("get-next-action", result.usage);
+  }
 
   return result.object;
 };

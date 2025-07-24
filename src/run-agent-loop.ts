@@ -222,6 +222,15 @@ export async function runAgentLoop(
     } satisfies OurMessageAnnotation);
 
     if (nextAction.type === "answer") {
+      // Send usage report before answering
+      const totalUsage = ctx.getTotalUsage();
+      writeMessageAnnotation({
+        type: "USAGE_REPORT",
+        totalTokens: totalUsage.totalTokens,
+        promptTokens: totalUsage.promptTokens,
+        completionTokens: totalUsage.completionTokens,
+      } satisfies OurMessageAnnotation);
+
       return answerQuestion(ctx, { langfuseTraceId, onFinish });
     }
 
@@ -230,5 +239,15 @@ export async function runAgentLoop(
     ctx.incrementStep();
   } // If we've taken 10 actions and still don't have an answer,
   // we ask the LLM to give its best attempt at an answer
+
+  // Send usage report before final answer
+  const totalUsage = ctx.getTotalUsage();
+  writeMessageAnnotation({
+    type: "USAGE_REPORT",
+    totalTokens: totalUsage.totalTokens,
+    promptTokens: totalUsage.promptTokens,
+    completionTokens: totalUsage.completionTokens,
+  } satisfies OurMessageAnnotation);
+
   return answerQuestion(ctx, { isFinal: true, langfuseTraceId, onFinish });
 }

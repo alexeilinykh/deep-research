@@ -7,6 +7,7 @@ import {
   ClipboardIcon,
   ExternalLinkIcon,
   CalendarIcon,
+  BarChartIcon,
 } from "lucide-react";
 import type { OurMessageAnnotation, SourceInfo } from "~/get-next-action";
 
@@ -24,6 +25,8 @@ export const ReasoningSteps = ({
       return annotation.action.title;
     } else if (annotation.type === "SOURCES_FOUND") {
       return annotation.title;
+    } else if (annotation.type === "USAGE_REPORT") {
+      return "Token Usage Summary";
     }
     return "Unknown";
   };
@@ -35,6 +38,8 @@ export const ReasoningSteps = ({
       if (annotation.action.type === "answer") return LinkIcon;
     } else if (annotation.type === "SOURCES_FOUND") {
       return ExternalLinkIcon;
+    } else if (annotation.type === "USAGE_REPORT") {
+      return BarChartIcon;
     }
     return SearchIcon;
   };
@@ -188,6 +193,38 @@ export const ReasoningSteps = ({
                               </div>
                             </a>
                           ))}
+                        </div>
+                      </div>
+                    )}
+                    {annotation.type === "USAGE_REPORT" && (
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <BarChartIcon className="size-4" />
+                          <span>Total Usage Report</span>
+                        </div>
+                        <div className="ml-6 space-y-1">
+                          <div className="rounded bg-gray-800 p-3">
+                            <div className="grid grid-cols-3 gap-4 text-xs">
+                              <div className="text-center">
+                                <div className="text-lg font-semibold text-blue-400">
+                                  {annotation.totalTokens.toLocaleString()}
+                                </div>
+                                <div className="text-gray-400">Total</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-lg font-semibold text-green-400">
+                                  {annotation.promptTokens.toLocaleString()}
+                                </div>
+                                <div className="text-gray-400">Input</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-lg font-semibold text-orange-400">
+                                  {annotation.completionTokens.toLocaleString()}
+                                </div>
+                                <div className="text-gray-400">Output</div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}

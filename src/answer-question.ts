@@ -56,7 +56,16 @@ Please provide a comprehensive answer based on the conversation history and the 
   return streamText({
     model,
     prompt: systemPrompt,
-    onFinish,
+    onFinish: (result) => {
+      // Report usage to context
+      if (result.usage) {
+        context.reportUsage("answer-question", result.usage);
+      }
+      // Call the original onFinish if provided
+      if (onFinish) {
+        onFinish(result);
+      }
+    },
     ...(langfuseTraceId && {
       experimental_telemetry: {
         isEnabled: true,
