@@ -26,11 +26,27 @@ export interface PlanAction {
 
 export type Action = ContinueAction | AnswerAction | PlanAction;
 
-// Type for message annotations
-export type OurMessageAnnotation = {
-  type: "NEW_ACTION";
-  action: Action;
-};
+// Source information for display
+export interface SourceInfo {
+  title: string;
+  url: string;
+  snippet: string;
+  favicon?: string;
+  date?: string;
+}
+
+// Type for message annotations using discriminated union
+export type OurMessageAnnotation =
+  | {
+      type: "NEW_ACTION";
+      action: Action;
+    }
+  | {
+      type: "SOURCES_FOUND";
+      title: string;
+      sources: SourceInfo[];
+      query: string;
+    };
 
 // Schema for structured LLM output - avoiding z.union for better LLM compatibility
 export const actionSchema = z.object({
