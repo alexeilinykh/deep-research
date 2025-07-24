@@ -128,8 +128,13 @@ export async function runAgentLoop(
       ctx.reportSearch(searchResult);
     });
 
-    // Step 4: Decide whether to continue or answer based on current context
+    // Step 4: Evaluate whether to continue or answer based on current context
     const nextAction = await getNextAction(ctx, langfuseTraceId);
+
+    // Store the feedback for future query rewriting (only if provided)
+    if (nextAction.feedback) {
+      ctx.updateFeedback(nextAction.feedback);
+    }
 
     // Send progress annotation to the UI
     writeMessageAnnotation({

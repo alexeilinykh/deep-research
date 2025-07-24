@@ -41,6 +41,11 @@ export class SystemContext {
    */
   private locationHints: LocationHints;
 
+  /**
+   * Most recent feedback from the evaluator
+   */
+  private latestFeedback: string | null = null;
+
   constructor(messages: Message[] = [], locationHints: LocationHints = {}) {
     this.messageHistory = [...messages];
     this.locationHints = locationHints;
@@ -56,6 +61,14 @@ export class SystemContext {
 
   reportSearch(search: SearchHistoryEntry) {
     this.searchHistory.push(search);
+  }
+
+  updateFeedback(feedback: string) {
+    this.latestFeedback = feedback;
+  }
+
+  getLatestFeedback(): string | null {
+    return this.latestFeedback;
   }
 
   getMessageHistory(): string {

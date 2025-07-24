@@ -8,6 +8,7 @@ export interface ContinueAction {
   type: "continue";
   title: string;
   reasoning: string;
+  feedback: string;
 }
 
 export interface AnswerAction {
@@ -36,9 +37,15 @@ export const actionSchema = z.object({
   title: z
     .string()
     .describe(
-      "The title of the action, to be displayed in the UI. Be extremely concise. 'Continuing research', 'Ready to answer', 'Gathering more information'",
+      "The title of the action, to be displayed in the UI. Be extremely concise. 'Evaluating information gaps', 'Ready to answer', 'Information assessment complete'",
     ),
   reasoning: z.string().describe("The reason you chose this step."),
+  feedback: z
+    .string()
+    .optional()
+    .describe(
+      "Detailed analysis of what information is available, what gaps exist, and why you're continuing the search. This feedback will be used to improve future searches. Be specific about missing information, quality of sources, and areas that need clarification. Only required when type is 'continue'.",
+    ),
   type: z.enum(["continue", "answer"]).describe(
     `The type of action to take.
       - 'continue': Continue gathering more information before answering.
@@ -68,7 +75,14 @@ export const getNextAction = async (
       },
     }),
     prompt: `
-You are a decision-making AI assistant. Your role is to determine whether you have sufficient information to answer the user's question comprehensively, or if you need to continue gathering more information.
+You are a research query optimizer. Your task is to analyze search results against the original research goal and either decide to answer the question or to search for more information.
+
+PROCESS:
+1. Identify ALL information explicitly requested in the original research goal
+2. Analyze what specific information has been successfully retrieved in the search results
+3. Identify ALL information gaps between what was requested and what was found
+4. For entity-specific gaps: Create targeted feedback for each missing attribute of identified entities
+5. For general knowledge gaps: Create focused feedback to find the missing conceptual information
 
 ${locationContext}
 CONVERSATION HISTORY:
@@ -79,20 +93,23 @@ CURRENT USER QUESTION: "${userQuestion}"
 Current Research Context:
 ${context.getSearchHistory() || "No searches performed yet."}
 
-Your task is simple: decide whether to CONTINUE gathering information or to ANSWER the question.
+EVALUATION CRITERIA:
+- CONTINUE if critical information is missing that would prevent a comprehensive answer
+- CONTINUE if sources are not authoritative enough for the question's importance
+- CONTINUE if the question has multiple aspects that haven't been fully explored
+- CONTINUE if recent developments or updates might affect the answer
+- ANSWER if you have comprehensive, reliable information that addresses all aspects of the question
+- ANSWER if additional searches would likely yield diminishing returns
 
-Guidelines for decision-making:
-- CONTINUE if you need more current, specific, or comprehensive information
-- CONTINUE if the question requires multiple perspectives or sources
-- CONTINUE if you haven't found authoritative sources on key aspects
-- CONTINUE if there are important details missing from your current knowledge
-- ANSWER if you have comprehensive, current, and reliable information from multiple sources
-- ANSWER if you have enough information to provide a thorough and accurate response
-- ANSWER if continuing to search would likely yield diminishing returns
+IMPORTANT: Only provide feedback when choosing 'continue'. When choosing 'answer', feedback is not needed.
 
-Consider the complexity of the question and the quality/depth of information you already have.
+When choosing 'continue', in your feedback be specific about:
+- What information you have found and its quality
+- What specific gaps exist and why they matter
+- What types of sources or information would fill these gaps
+- How confident you are in the current information
 
-What should be the next action?
+Provide your assessment of the current information state and next action.
     `,
   });
 

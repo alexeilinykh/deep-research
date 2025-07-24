@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { SearchIcon, LinkIcon, BrainIcon } from "lucide-react";
+import { SearchIcon, LinkIcon, BrainIcon, ClipboardIcon } from "lucide-react";
 import type { OurMessageAnnotation } from "~/get-next-action";
 
 export const ReasoningSteps = ({
@@ -47,9 +47,24 @@ export const ReasoningSteps = ({
                       </ReactMarkdown>
                     </div>
                     {annotation.action.type === "continue" && (
-                      <div className="mt-2 flex items-center gap-2 text-sm text-gray-400">
-                        <SearchIcon className="size-4" />
-                        <span>Preparing to gather more information</span>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <SearchIcon className="size-4" />
+                          <span>Evaluating information gaps</span>
+                        </div>
+                        {(annotation.action as any).feedback && (
+                          <div className="ml-6 space-y-1">
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <ClipboardIcon className="size-3" />
+                              <span>Evaluator Feedback:</span>
+                            </div>
+                            <div className="rounded bg-gray-800 px-3 py-2 text-xs text-gray-300">
+                              <ReactMarkdown>
+                                {(annotation.action as any).feedback}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                     {annotation.action.type === "plan" && (
@@ -78,9 +93,24 @@ export const ReasoningSteps = ({
                       </div>
                     )}
                     {annotation.action.type === "answer" && (
-                      <div className="mt-2 flex items-center gap-2 text-sm text-gray-400">
-                        <LinkIcon className="size-4" />
-                        <span>Ready to provide answer</span>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <LinkIcon className="size-4" />
+                          <span>Ready to provide answer</span>
+                        </div>
+                        {(annotation.action as any).feedback && (
+                          <div className="ml-6 space-y-1">
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <ClipboardIcon className="size-3" />
+                              <span>Final Assessment:</span>
+                            </div>
+                            <div className="rounded bg-gray-800 px-3 py-2 text-xs text-gray-300">
+                              <ReactMarkdown>
+                                {(annotation.action as any).feedback}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

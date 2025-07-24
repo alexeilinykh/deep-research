@@ -30,6 +30,7 @@ export const rewriteQueries = async (
   const userQuestion = context.getCurrentUserQuestion();
   const locationContext = context.getLocationContext();
   const searchHistory = context.getSearchHistory();
+  const latestFeedback = context.getLatestFeedback();
 
   const result = await generateObject({
     model,
@@ -74,7 +75,10 @@ CURRENT USER QUESTION: "${userQuestion}"
 PREVIOUS SEARCH HISTORY:
 ${searchHistory || "No previous searches performed."}
 
-Based on the conversation history and what has already been searched (if anything), create a comprehensive research plan and generate the next set of search queries needed to answer the user's question thoroughly.`,
+EVALUATOR FEEDBACK:
+${latestFeedback || "No previous feedback available."}
+
+Based on the conversation history, previous searches, and especially the evaluator feedback, create a comprehensive research plan and generate the next set of search queries needed to address the specific information gaps identified by the evaluator.`,
   });
 
   return result.object;
