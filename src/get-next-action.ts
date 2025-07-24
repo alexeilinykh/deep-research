@@ -4,11 +4,10 @@ import { z } from "zod";
 import { SystemContext } from "./system-context";
 
 // Action types for the next action decision
-export interface SearchAction {
-  type: "search";
+export interface ContinueAction {
+  type: "continue";
   title: string;
   reasoning: string;
-  query: string;
 }
 
 export interface AnswerAction {
@@ -17,7 +16,14 @@ export interface AnswerAction {
   reasoning: string;
 }
 
-export type Action = SearchAction | AnswerAction;
+export interface PlanAction {
+  type: "plan";
+  title: string;
+  reasoning: string;
+  queries: string[];
+}
+
+export type Action = ContinueAction | AnswerAction | PlanAction;
 
 // Type for message annotations
 export type OurMessageAnnotation = {
@@ -30,18 +36,14 @@ export const actionSchema = z.object({
   title: z
     .string()
     .describe(
-      "The title of the action, to be displayed in the UI. Be extremely concise. 'Searching Saka's injury history', 'Checking HMRC industrial action', 'Comparing toaster ovens'",
+      "The title of the action, to be displayed in the UI. Be extremely concise. 'Continuing research', 'Ready to answer', 'Gathering more information'",
     ),
   reasoning: z.string().describe("The reason you chose this step."),
-  type: z.enum(["search", "answer"]).describe(
+  type: z.enum(["continue", "answer"]).describe(
     `The type of action to take.
-      - 'search': Search the web for information and automatically scrape the top results for detailed content.
-      - 'answer': Answer the user's question and complete the loop.`,
+      - 'continue': Continue gathering more information before answering.
+      - 'answer': You have sufficient information to answer the user's question.`,
   ),
-  query: z
-    .string()
-    .describe("The query to search for. Required if type is 'search'.")
-    .optional(),
 });
 
 export const getNextAction = async (
@@ -66,33 +68,31 @@ export const getNextAction = async (
       },
     }),
     prompt: `
-You are a helpful AI assistant with access to real-time web search and scraping capabilities. The current date and time is ${new Date().toLocaleString()}.
+You are a decision-making AI assistant. Your role is to determine whether you have sufficient information to answer the user's question comprehensively, or if you need to continue gathering more information.
 
-Your goal is to gather comprehensive information to answer the user's question accurately and thoroughly.
 ${locationContext}
 CONVERSATION HISTORY:
 ${conversationHistory}
 
 CURRENT USER QUESTION: "${userQuestion}"
 
-Your workflow should be:
-1. If you need more information, SEARCH the web for relevant, up-to-date information from diverse sources. The search will automatically scrape the top results to get full content.
-2. When you have sufficient information from multiple sources, ANSWER the user's question
-
-Guidelines:
-- Always search for current, authoritative information
-- Prioritize official sources and reputable websites
-- The search action will automatically scrape multiple diverse sources (news sites, documentation, blogs, etc.)
-- Don't rely solely on search snippets - the full scraped content will be available
-- Only answer when you have comprehensive information from scraped sources
-- IMPORTANT: Consider the full conversation history when deciding what action to take. If the user is asking a follow-up question, understand what they're referring to from the previous conversation.
-
-Current Context:
-
-Search History:
+Current Research Context:
 ${context.getSearchHistory() || "No searches performed yet."}
 
-Based on the conversation history, current context, and the user's question, what should be the next action?
+Your task is simple: decide whether to CONTINUE gathering information or to ANSWER the question.
+
+Guidelines for decision-making:
+- CONTINUE if you need more current, specific, or comprehensive information
+- CONTINUE if the question requires multiple perspectives or sources
+- CONTINUE if you haven't found authoritative sources on key aspects
+- CONTINUE if there are important details missing from your current knowledge
+- ANSWER if you have comprehensive, current, and reliable information from multiple sources
+- ANSWER if you have enough information to provide a thorough and accurate response
+- ANSWER if continuing to search would likely yield diminishing returns
+
+Consider the complexity of the question and the quality/depth of information you already have.
+
+What should be the next action?
     `,
   });
 

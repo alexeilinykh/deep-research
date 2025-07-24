@@ -6,6 +6,7 @@ import { SystemContext } from "./system-context";
 import { getNextAction, type OurMessageAnnotation } from "./get-next-action";
 import { answerQuestion } from "./answer-question";
 import { summarizeURL } from "./summarize-url";
+import { rewriteQueries } from "./query-rewriter";
 import type { StreamTextResult, Message, streamText } from "ai";
 
 export async function runAgentLoop(
@@ -37,23 +38,24 @@ export async function runAgentLoop(
   // A loop that continues until we have an answer
   // or we've taken 10 actions
   while (!ctx.shouldStop()) {
-    // We choose the next action based on the state of our system
-    const nextAction = await getNextAction(ctx, langfuseTraceId);
+    // Step 1: Generate queries using the query rewriter
+    const queryRewriterResult = await rewriteQueries(ctx, langfuseTraceId);
 
-    // Send progress annotation to the UI
+    // Send the planning annotation to the UI
     writeMessageAnnotation({
       type: "NEW_ACTION",
-      action: nextAction as any, // Type assertion needed due to Zod schema differences
+      action: {
+        type: "plan",
+        title: "Planning research strategy",
+        reasoning: queryRewriterResult.plan,
+        queries: queryRewriterResult.queries,
+      } as any,
     } satisfies OurMessageAnnotation);
 
-    // We execute the action and update the state of our system
-    if (nextAction.type === "search") {
-      if (!nextAction.query) {
-        throw new Error("Search action requires a query");
-      }
-
+    // Step 2: Execute all queries in parallel based on the plan
+    const searchPromises = queryRewriterResult.queries.map(async (query) => {
       const searchResults = await searchSerper(
-        { q: nextAction.query, num: env.SEARCH_RESULTS_COUNT },
+        { q: query, num: env.SEARCH_RESULTS_COUNT },
         abortSignal,
       );
 
@@ -94,7 +96,7 @@ export async function runAgentLoop(
             snippet: searchResult.snippet,
             date: searchResult.date || "No date",
             content: scrapedContent,
-            query: nextAction.query!,
+            query: query,
             conversationHistory,
             langfuseTraceId,
           });
@@ -109,23 +111,40 @@ export async function runAgentLoop(
         },
       );
 
-      // Wait for all summarizations to complete
+      // Wait for all summarizations to complete for this query
       const summarizedResults = await Promise.all(summarizationPromises);
 
-      // Report the search results with summaries to the context
-      ctx.reportSearch({
-        query: nextAction.query,
+      return {
+        query,
         results: summarizedResults,
-      });
-    } else if (nextAction.type === "answer") {
+      };
+    });
+
+    // Wait for all searches to complete
+    const allSearchResults = await Promise.all(searchPromises);
+
+    // Step 3: Save all search results to the context
+    allSearchResults.forEach((searchResult) => {
+      ctx.reportSearch(searchResult);
+    });
+
+    // Step 4: Decide whether to continue or answer based on current context
+    const nextAction = await getNextAction(ctx, langfuseTraceId);
+
+    // Send progress annotation to the UI
+    writeMessageAnnotation({
+      type: "NEW_ACTION",
+      action: nextAction as any, // Type assertion needed due to Zod schema differences
+    } satisfies OurMessageAnnotation);
+
+    if (nextAction.type === "answer") {
       return answerQuestion(ctx, { langfuseTraceId, onFinish });
     }
 
+    // If nextAction.type === "continue", we loop again
     // Increment the step counter after each action
     ctx.incrementStep();
-  }
-
-  // If we've taken 10 actions and still don't have an answer,
+  } // If we've taken 10 actions and still don't have an answer,
   // we ask the LLM to give its best attempt at an answer
   return answerQuestion(ctx, { isFinal: true, langfuseTraceId, onFinish });
 }

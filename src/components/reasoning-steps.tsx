@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { SearchIcon, LinkIcon } from "lucide-react";
+import { SearchIcon, LinkIcon, BrainIcon } from "lucide-react";
 import type { OurMessageAnnotation } from "~/get-next-action";
 
 export const ReasoningSteps = ({
@@ -46,10 +46,41 @@ export const ReasoningSteps = ({
                         {annotation.action.reasoning}
                       </ReactMarkdown>
                     </div>
-                    {annotation.action.type === "search" && (
+                    {annotation.action.type === "continue" && (
                       <div className="mt-2 flex items-center gap-2 text-sm text-gray-400">
                         <SearchIcon className="size-4" />
-                        <span>{annotation.action.query}</span>
+                        <span>Preparing to gather more information</span>
+                      </div>
+                    )}
+                    {annotation.action.type === "plan" && (
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <BrainIcon className="size-4" />
+                          <span>Research Plan Generated</span>
+                        </div>
+                        {(annotation.action as any).queries && (
+                          <div className="ml-6 space-y-1">
+                            <div className="text-xs text-gray-500">
+                              Queries:
+                            </div>
+                            {(
+                              (annotation.action as any).queries as string[]
+                            ).map((query, idx) => (
+                              <div
+                                key={idx}
+                                className="rounded bg-gray-800 px-2 py-1 text-xs text-gray-400"
+                              >
+                                {idx + 1}. {query}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {annotation.action.type === "answer" && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-gray-400">
+                        <LinkIcon className="size-4" />
+                        <span>Ready to provide answer</span>
                       </div>
                     )}
                   </div>
